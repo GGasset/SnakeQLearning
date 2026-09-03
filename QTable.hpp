@@ -3,7 +3,6 @@
 #include "vector"
 #include "unordered_map"
 
-#define N_actions 3
 
 template<typename StateT = std::string>
 class QTable
@@ -15,6 +14,9 @@ private:
 	const float learning_rate;
 
 public:
+	static const size_t N_actions;
+
+	QTable(float discount_factor, float learning_rate);
 
 	std::vector<float> get_Q_values(StateT state);
 	void update_Q_values(std::vector<std::tuple<StateT, size_t, float>> state_action_index_reward);
