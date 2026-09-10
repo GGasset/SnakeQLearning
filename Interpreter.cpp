@@ -50,7 +50,7 @@ void run(VecSnakeGame &vec_env, QTable<std::string> &table, snake_args args)
 
 			std::cout << vec_env.to_string(0);
 
-			sleep(.5);
+			sleep(args.print_interval_s);
 		}
 		return;
 	}

@@ -9,7 +9,7 @@
 struct snake_args
 {
 	bool print_run = false;
-	float print_interval = .5;
+	float print_interval_s = .5;
 
 	float learning_rate = .01;
 	float discount_factor = .98;
