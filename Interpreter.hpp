@@ -18,8 +18,12 @@ struct snake_args
 	size_t max_adjacent_0s = 2;
 	size_t board_size = 10;
 	size_t nenvs = 64;
-	size_t n_iters;
+	size_t n_iters = 1e4;
 
+	std::string load_filename = "";
+
+	std::string save_filename = "";
+	size_t iters_between_saves = 50;
 };
 
 void run(VecSnakeGame &vec_env, QTable<std::string> &table, snake_args);
