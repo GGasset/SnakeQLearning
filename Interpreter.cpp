@@ -55,8 +55,43 @@ void run(VecSnakeGame &vec_env, QTable<std::string> &table, snake_args args)
 		return;
 	}
 
-	for (size_t i = 0; i < args.n_iters; i++)
+	std::vector<std::vector<std::tuple<std::string, size_t, float>>> state_action_reward;
+	state_action_reward.resize(vec_env.get_nenvs());
+	for (size_t iter_i = 0; iter_i < args.n_iters; iter_i++)
 	{
+		for (size_t env_i = 0; env_i < vec_env.get_nenvs(); env_i++)
+		{
+			std::string state = vec_env.get_state(env_i);
+			size_t action_i = get_action(table.get_Q_values(state), args);
+			action_result result = vec_env.update(env_i, action_i);
 
+			float reward = 0;
+			switch (result)
+			{
+			case action_result::size_increase:
+				reward = 1;
+				break;
+			case action_result::size_decrease:
+				reward = -.9;
+				break;
+			case action_result::game_over:
+				reward = -2;
+				break;
+			case action_result::game_won:
+				reward = 2;
+			case action_result::nothing:
+			default:
+				reward = .02;
+				break;
+			}
+
+			state_action_reward[env_i].push_back({state, action_i, reward});
+
+			if (result == game_over || result == game_won)
+			{
+				table.update_Q_values(state_action_reward[env_i]);
+				state_action_reward[env_i].clear();
+			}
+		}
 	}
 }
