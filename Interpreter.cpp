@@ -8,13 +8,14 @@ uint64_t xorshift64() {
 	return x;
 }
 
+// Uses softmax function
 size_t get_action(std::vector<float> raw_logits, snake_args args)
 {
 	float max_raw_logit = raw_logits[0];
 	for (size_t i = 1; i < raw_logits.size(); i++) if (raw_logits[i] > max_raw_logit) max_raw_logit = raw_logits[i];
 	
 	for (size_t i = 0; i < raw_logits.size(); i++) raw_logits[i] -= max_raw_logit;
-	
+
 
 	float exp_sum = 0;
 	for (size_t i = 0; i < raw_logits.size(); i++) exp_sum += exp(raw_logits[i] / (args.temperature + 1e-8));
