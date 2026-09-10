@@ -41,9 +41,11 @@ private:
 
 public:
 	VecSnakeGame(size_t nenvs, size_t max_adjacent_0s, size_t board_size);
+	size_t get_nenvs();
 
 	std::string get_state(size_t env_i);
 	action_result update(size_t env_i, size_t action_i);
 
 	std::string to_string(size_t env_i);
+
 };

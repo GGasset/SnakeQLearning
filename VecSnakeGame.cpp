@@ -102,6 +102,11 @@ VecSnakeGame::VecSnakeGame(size_t nenvs, size_t max_adjacent_0s, size_t board_si
 	this->board_size = board_size;
 }
 
+size_t VecSnakeGame::get_nenvs()
+{
+	return envs.size();
+}
+
 std::string VecSnakeGame::get_state(size_t env_i)
 {
 	std::string vision[2];
@@ -223,10 +228,14 @@ std::string VecSnakeGame::to_string(size_t env_i)
 {
 	std::string out;
 	
+	// Clear screen
+	out += '\033[2J';
+
 	// Set background color to black
 	out += "\033[48;7;10;9m";
 	for (size_t i = 0; i < board_size * board_size; i++)
 	{
+		if (i % board_size == 0) out += '\n';
 		char c = get_at_cell(env_i, i);
 		switch (c)
 		{
@@ -247,4 +256,6 @@ std::string VecSnakeGame::to_string(size_t env_i)
 		}
 		out += "█";
 	}
+	out += '\n';
+	return out;
 }
