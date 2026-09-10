@@ -59,6 +59,9 @@ void run(VecSnakeGame &vec_env, QTable<std::string> &table, snake_args args)
 	state_action_reward.resize(vec_env.get_nenvs());
 	for (size_t iter_i = 0; iter_i < args.n_iters; iter_i++)
 	{
+		if (iter_i % args.iters_between_saves && iter_i)
+			table.save(args.save_filename);
+
 		for (size_t env_i = 0; env_i < vec_env.get_nenvs(); env_i++)
 		{
 			std::string state = vec_env.get_state(env_i);
