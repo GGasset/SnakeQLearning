@@ -2,11 +2,13 @@
 #include <cstddef>
 #include "string"
 #include "vector"
+#include "iostream"
 
 enum action_result
 {
 	nothing,
 	game_over,
+	game_won,
 	size_increase,
 	size_decrease,
 };
@@ -21,7 +23,6 @@ struct SnakeGameData
 	int direction;
 };
 
-// Does not check if board is full
 class VecSnakeGame
 {
 private:

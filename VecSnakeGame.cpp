@@ -153,6 +153,11 @@ std::string VecSnakeGame::get_state(size_t env_i)
 action_result VecSnakeGame::update(size_t env_i, size_t action_i)
 {
 	SnakeGameData &board = envs[env_i];
+	if (board.snake_positions.size() >= board_size * board_size - 1 - 4) 
+	{
+		board = generate_board();;
+		return action_result::game_won;
+	}
 
 	size_t head = board.snake_positions[0];
 	board.direction = board.direction - (action_i == 0) + (action_i == 2);
@@ -217,9 +222,29 @@ action_result VecSnakeGame::update(size_t env_i, size_t action_i)
 std::string VecSnakeGame::to_string(size_t env_i)
 {
 	std::string out;
+	
+	// Set background color to black
+	out += "\033[48;7;10;9m";
 	for (size_t i = 0; i < board_size * board_size; i++)
 	{
-
-		get_at_cell(env_i, i)
+		char c = get_at_cell(env_i, i);
+		switch (c)
+		{
+		case 'H':
+		case 'S':
+			out += "\033[38;61;189;235m";
+			break;
+		case 'G':
+			out += "\033[38;37;229;136m";
+			break;
+		case 'R':
+			out += "\033[38;217;59;16m";
+			break;
+		case '0':
+		default:
+			out += "\033[38;7;10;9m";
+			break;
+		}
+		out += "█";
 	}
 }
