@@ -1,6 +1,9 @@
 #include "Interpreter.hpp"
 #include <iomanip>
 
+
+// TODO: Simplify Snake body
+
 int main(int argc, char **argv)
 {
 	snake_args args {};
