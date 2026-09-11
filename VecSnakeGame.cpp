@@ -67,7 +67,8 @@ void VecSnakeGame::set_at_random_empty_pos(SnakeGameData board, size_t &pos)
 	pos = -1;
 
 	size_t candidate = rand() % (board_size * board_size);
-	while (get_at_cell(board, candidate) != '0')
+	char cell;
+	while ((cell = get_at_cell(board, candidate)) != '0')
 	{
 		candidate++;
 		candidate *= (candidate < board_size * board_size);
@@ -84,8 +85,8 @@ char VecSnakeGame::get_at_cell(SnakeGameData board, size_t i)
 {
 	char out = '0';
 	out += ('H' - out) * (board.snake_positions[0] == i);
-	for (size_t i = 1; i < board.snake_positions.size() && out == '0'; i++)
-		out += ('S' - out) * (board.snake_positions[i] == i);
+	for (size_t j = 1; j < board.snake_positions.size() && out == '0'; j++)
+		out += ('S' - out) * (board.snake_positions[j] == i);
 	out += ('G' - out) * (board.green_apple_pos[0] == i);
 	out += ('G' - out) * (board.green_apple_pos[1] == i);
 	out += ('R' - out) * (board.red_apple_pos == i);
@@ -93,13 +94,14 @@ char VecSnakeGame::get_at_cell(SnakeGameData board, size_t i)
 	return out;
 }
 
-VecSnakeGame::VecSnakeGame(size_t nenvs, size_t max_adjacent_0s, size_t board_size)
+VecSnakeGame::VecSnakeGame(size_t nenvs, size_t max_adjacent_0s, size_t board_size, size_t timeout)
 {
-	for (size_t i = 0; i < nenvs; i++)
-		envs.push_back(generate_board());
-
 	this->max_adjacent_0s = max_adjacent_0s;
 	this->board_size = board_size;
+	this->timeout = timeout;
+
+	for (size_t i = 0; i < nenvs; i++)
+		envs.push_back(generate_board());
 }
 
 size_t VecSnakeGame::get_nenvs()
@@ -130,7 +132,56 @@ std::string VecSnakeGame::get_state(size_t env_i)
 	vision[0] += 'W';
 	vision[1] += 'W';
 
-	std::string out = vision[0] + vision[1];
+	std::string concat = vision[0] + "H" + vision[1];
+
+	std::string proc_vision[4];
+	for (size_t i = 0, v_i = 0; i < concat.size(); i++)
+	{
+		bool is_head = concat[i] == 'H';
+		if (is_head)
+		{
+			proc_vision[v_i] += '#';
+			v_i++;
+			continue;
+		}
+
+		proc_vision[v_i] += concat[i];
+	}
+
+	std::string out;
+	int dir = board.direction;
+	switch (dir)
+	{
+	case 0: // Up
+		out += proc_vision[2];
+		out += proc_vision[1];
+		out += proc_vision[3];
+		out += proc_vision[0];
+		break;
+	case 1: // Right
+		out += proc_vision[1];
+		out += proc_vision[3];
+		out += proc_vision[0];
+		out += proc_vision[2];
+		break;
+	case 2: // Down
+		out += proc_vision[3];
+		out += proc_vision[0];
+		out += proc_vision[2];
+		out += proc_vision[1];
+		break;
+	case 3: // Left
+		out += proc_vision[0];
+		out += proc_vision[2];
+		out += proc_vision[1];
+		out += proc_vision[3];
+		break;
+	
+	default:
+		std::cerr << "Invalid direction\n";
+		throw;
+		break;
+	}
 
 	// Simplify state
 	size_t consecutive_0_count = 0;
@@ -158,6 +209,9 @@ std::string VecSnakeGame::get_state(size_t env_i)
 action_result VecSnakeGame::update(size_t env_i, size_t action_i)
 {
 	SnakeGameData &board = envs[env_i];
+	board.episode_len++;
+	
+
 	if (board.snake_positions.size() >= board_size * board_size - 1 - 4) 
 	{
 		board = generate_board();;
@@ -196,9 +250,10 @@ action_result VecSnakeGame::update(size_t env_i, size_t action_i)
 	board.snake_positions.insert(board.snake_positions.begin(), new_pos);
 	if (object_at_new_pos == 'G')
 	{
+		board.time_since_eat = 0;
 
-		size_t &apple_pos = board.green_apple_pos[0];
-		if (apple_pos != new_pos) apple_pos = board.green_apple_pos[1];
+		size_t apple_i = board.green_apple_pos[1] == new_pos;
+		size_t &apple_pos = board.green_apple_pos[apple_i];
 
 		set_at_random_empty_pos(board, apple_pos);
 
@@ -221,6 +276,14 @@ action_result VecSnakeGame::update(size_t env_i, size_t action_i)
 		return action_result::size_decrease;
 	}
 
+	board.time_since_eat++;
+
+	if (board.time_since_eat >= timeout)
+	{
+		board = generate_board();
+		return action_result::game_over;
+	}
+
 	return action_result::nothing;
 }
 
@@ -229,10 +292,10 @@ std::string VecSnakeGame::to_string(size_t env_i)
 	std::string out;
 	
 	// Clear screen
-	out += '\033[2J';
+	out += "\033[2J";
 
 	// Set background color to black
-	out += "\033[48;7;10;9m";
+	//out += "\033[48;7;10;9m";
 	for (size_t i = 0; i < board_size * board_size; i++)
 	{
 		if (i % board_size == 0) out += '\n';
@@ -240,22 +303,25 @@ std::string VecSnakeGame::to_string(size_t env_i)
 		switch (c)
 		{
 		case 'H':
+			out += "\e[0;34m";
+			break;
 		case 'S':
-			out += "\033[38;61;189;235m";
+			out += "\e[0;36m";
 			break;
 		case 'G':
-			out += "\033[38;37;229;136m";
+			out += "\e[0;32m";
 			break;
 		case 'R':
-			out += "\033[38;217;59;16m";
+			out += "\e[0;31m";
 			break;
 		case '0':
 		default:
-			out += "\033[38;7;10;9m";
+			out += "\e[0;30m";
 			break;
 		}
-		out += "█";
+		//out += "█";
+		out += c;
 	}
-	out += '\n';
+	out += "\n\e[0;37m";
 	return out;
 }
