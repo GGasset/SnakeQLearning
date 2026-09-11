@@ -1,7 +1,12 @@
 
+#pragma once
+
 #include "unistd.h"
 #include "cmath"
 #include "random"
+#include "iostream"
+#include "math.h"
+#include <iomanip>
 
 #include "VecSnakeGame.hpp"
 #include "QTable.hpp"
@@ -13,12 +18,13 @@ struct snake_args
 
 	float learning_rate = .01;
 	float discount_factor = .98;
-	float temperature = .1;
+	float temperature = 1;
 
 	size_t max_adjacent_0s = 2;
 	size_t board_size = 10;
 	size_t nenvs = 64;
 	size_t n_iters = 1e4;
+	size_t timeout = 40;
 
 	std::string load_filename = "";
 
