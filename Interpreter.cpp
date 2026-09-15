@@ -1,13 +1,4 @@
 #include "Interpreter.hpp"
-#include <chrono>
-
-uint64_t xorshift64() {
-	static uint64_t x = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
-	x ^= x << 13;
-	x ^= x >> 7;
-	x ^= x << 17;
-	return x;
-}
 
 // Uses softmax function
 size_t get_action(std::vector<float> raw_logits, snake_args args)
