@@ -1,4 +1,5 @@
 #include "VecSnakeGame.hpp"
+#include "chrono"
 
 SnakeGameData VecSnakeGame::generate_board()
 {
@@ -66,7 +67,7 @@ void VecSnakeGame::set_at_random_empty_pos(SnakeGameData board, size_t &pos)
 {
 	pos = -1;
 
-	size_t candidate = rand() % (board_size * board_size);
+	size_t candidate = xorshift64() % (board_size * board_size);
 	char cell;
 	while ((cell = get_at_cell(board, candidate)) != '0')
 	{
@@ -94,9 +95,9 @@ char VecSnakeGame::get_at_cell(SnakeGameData board, size_t i)
 	return out;
 }
 
-VecSnakeGame::VecSnakeGame(size_t nenvs, size_t max_adjacent_0s, size_t board_size, size_t timeout)
+VecSnakeGame::VecSnakeGame(size_t nenvs, snake_args args, size_t board_size, size_t timeout)
 {
-	this->max_adjacent_0s = max_adjacent_0s;
+	this->args = args;
 	this->board_size = board_size;
 	this->timeout = timeout;
 
@@ -119,8 +120,6 @@ std::string VecSnakeGame::get_state(size_t env_i)
 	size_t head_pos_x = head_pos % board_size;
 	size_t head_pos_y = head_pos / board_size;
 
-	vision[0] += 'W';
-	vision[1] += 'W';
 	for (size_t i = 0; i < board_size; i++)
 	{
 		// Fill vision along the y axis (horizontally)
@@ -129,8 +128,6 @@ std::string VecSnakeGame::get_state(size_t env_i)
 		// Fill vision along the x axis (vertically)
 		vision[1] += get_at_cell(env_i, board_size * i + head_pos_x); 
 	}
-	vision[0] += 'W';
-	vision[1] += 'W';
 
 	std::string concat = vision[0] + "H" + vision[1];
 
@@ -140,7 +137,7 @@ std::string VecSnakeGame::get_state(size_t env_i)
 		bool is_head = concat[i] == 'H';
 		if (is_head)
 		{
-			proc_vision[v_i] += '#';
+			//proc_vision[v_i] += '#';
 			v_i++;
 			continue;
 		}
@@ -154,26 +151,38 @@ std::string VecSnakeGame::get_state(size_t env_i)
 	{
 	case 0: // Up
 		out += proc_vision[2];
+		out += 'W';
 		out += proc_vision[1];
+		out += 'W';
 		out += proc_vision[3];
+		out += 'W';
 		out += proc_vision[0];
 		break;
 	case 1: // Right
 		out += proc_vision[1];
+		out += 'W';
 		out += proc_vision[3];
+		out += 'W';
 		out += proc_vision[0];
+		out += 'W';
 		out += proc_vision[2];
 		break;
 	case 2: // Down
 		out += proc_vision[3];
+		out += 'W';
 		out += proc_vision[0];
+		out += 'W';
 		out += proc_vision[2];
+		out += 'W';
 		out += proc_vision[1];
 		break;
 	case 3: // Left
 		out += proc_vision[0];
+		out += 'W';
 		out += proc_vision[2];
+		out += 'W';
 		out += proc_vision[1];
+		out += 'W';
 		out += proc_vision[3];
 		break;
 	
@@ -184,24 +193,9 @@ std::string VecSnakeGame::get_state(size_t env_i)
 	}
 
 	// Simplify state
-	size_t consecutive_0_count = 0;
-	for (size_t i = 0; i < out.size(); i++)
-	{
-		if (out[i] != '0')
-		{
-			consecutive_0_count = 0;
-			continue;
-		}
-
-		if (consecutive_0_count >= max_adjacent_0s)
-		{
-			out.erase(out.begin() + i);
-			i--;
-			continue;
-		}
-
-		consecutive_0_count++;
-	}
+	out = remove_consecutives(out, '0', args.max_adjacent_0s);
+	out = remove_consecutives(out, 'S', args.max_adjacent_body);
+	//out = remove_consecutives(out, 'W', 1);
 
 	return out;
 }
@@ -294,34 +288,69 @@ std::string VecSnakeGame::to_string(size_t env_i)
 	// Clear screen
 	out += "\033[2J";
 
-	// Set background color to black
-	//out += "\033[48;7;10;9m";
+	// Set background color to black 
+	//"\033[48;2;248;120;56m"
 	for (size_t i = 0; i < board_size * board_size; i++)
 	{
-		if (i % board_size == 0) out += '\n';
+		if (i % board_size == 0 && i) out += "\e[0m\n";
+		out += "\033[48;2;77;77;77m";
 		char c = get_at_cell(env_i, i);
+		std::string to_add;
 		switch (c)
 		{
 		case 'H':
-			out += "\e[0;34m";
+			//out += "\e[0;34m";
+			to_add += "\033[38;2;114;132;208m";
+			to_add += "██";
 			break;
 		case 'S':
-			out += "\e[0;36m";
+			to_add += "\033[38;2;44;132;208m";
+			to_add += "██";
+		//out += "\e[0;36m";
 			break;
 		case 'G':
-			out += "\e[0;32m";
+			//out += "\033[38;2;30;200;10m";
+			//out += "\e[0;32m";
+			to_add += "🍏";
 			break;
 		case 'R':
-			out += "\e[0;31m";
+			//out += "\033[38;2;250;100;90m";
+			//out += "\e[0;31m";
+			to_add += "🍎";
 			break;
 		case '0':
 		default:
-			out += "\e[0;30m";
+		//out += "\033[38;2;250;100;90m";
+			to_add += "\033[38;2;77;77;77m";
+			to_add += "██";
+			//out += "\e[0;30m";
 			break;
 		}
-		//out += "█";
-		out += c;
+		out += to_add;
 	}
-	out += "\n\e[0;37m";
+	out += "\e[0m\n";
 	return out;
+}
+
+std::string remove_consecutives(std::string in, char c, size_t max_consecutives)
+{
+	size_t consecutive_c_count = 0;
+	for (size_t i = 0; i < in.size(); i++)
+	{
+		if (in[i] != c)
+		{
+			consecutive_c_count = 0;
+			continue;
+		}
+
+		if (consecutive_c_count >= max_consecutives)
+		{
+			in.erase(in.begin() + i);
+			i--;
+			continue;
+		}
+
+		consecutive_c_count++;
+	}
+	return in;
 }
