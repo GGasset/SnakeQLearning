@@ -9,22 +9,23 @@ int main(int argc, char **argv)
 	snake_args args {};
 
 	
-	args.save_filename = "./body_1__empty_1";
-	args.load_filename = "./body_1__empty_1";
-	args.iters_between_saves = 10000;
-	args.n_iters = 200000;
+	args.save_filename = "./testing";
+	args.load_filename = "./testing";
+	args.iters_between_saves = 20000;
+	args.n_iters = 100000000;
 	args.print_run = false;
-	args.print_interval_s = .3;
+	args.print_interval_s = .1;
 	args.max_adjacent_0s = 1;
-	args.nenvs = 512;
+	args.nenvs = 128;
+	args.discount_factor = .99;
 
 	args.max_adjacent_body = 1;
 
 	args.learning_rate = .2;
 
-	args.timeout = 142;
+	args.timeout = 42;
 
-	args.temperature = args.print_run ? .15 : 1;
+	args.temperature = .15;
 
 
 	VecSnakeGame vec_env = VecSnakeGame(args.nenvs, args, args.board_size, args.timeout);
