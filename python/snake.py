@@ -23,16 +23,22 @@ class SnakeEnv(gym.Env):
         # Map action numbers to actual movements on the grid
         # This makes the code more readable than using raw numbers
         self._action_to_direction = {
-            0: np.array(1),   # Move right (column + 1)
-            1: np.array(-self.size),  # Move up (row - 1)
-            2: np.array(-1),  # Move left (column - 1)
-            3: np.array(self.size),   # Move down (row + 1)
+            0: 1,   # Move right (column + 1)
+            1: -self.size,  # Move up (row - 1)
+            2: -1,  # Move left (column - 1)
+            3: self.size,   # Move down (row + 1)
         }
 
     def _get_obs(self):
         out = []
 
-        horizontal_indices = [self.size * self.snake_positions[0][1] + i for i in range(self.size)]
+        horizontal_indices: list[int] = [int(self.size * (self.snake_positions[0] / self.size) + i) for i in range(self.size)]
+        vertical_indices: list[int] = [int(self.size * i + self.snake_positions[0] % self.size) for i in range(self.size)]
+
+        obs_indices = horizontal_indices + vertical_indices
+
+        for indice in obs_indices:
+            out.append(self.get_at_cell(indice))
 
         return np.array(out)
 
@@ -73,29 +79,45 @@ class SnakeEnv(gym.Env):
         Returns:
             tuple: (observation, reward, terminated, truncated, info)
         """
+
+        self.time_since_eat += 1
+
         # Map the discrete action (0-3) to a movement direction
         direction = self._action_to_direction[action]
 
-        # Update agent position, ensuring it stays within grid bounds
-        # np.clip prevents the agent from walking off the edge
-        self._agent_location = np.clip(
-            self._agent_location + direction, 0, self.size - 1
-        )
+        old_head_pos = self.snake_positions[0]
+        new_head_pos = self.snake_positions[0] + direction
+        scaped_hor = new_head_pos < 0 or new_head_pos > self.size * self.size
+        scaped_ver = direction == -1 and old_head_pos % self.size == 0
+        scaped_ver = scaped_ver or direction == 1 and old_head_pos % self.size == self.size - 1
 
-        # Check if agent reached the target
-        terminated = np.array_equal(self._agent_location, self._target_location)
+        front_obj = self.get_at_cell(new_head_pos)
+        terminated = scaped_hor or scaped_ver or front_obj == ord('S')
+        terminated = terminated or (front_obj == ord('R') and len(self.snake_positions) == 1)
 
-        # We don't use truncation in this simple environment
-        # (could add a step limit here if desired)
-        truncated = False
+        truncated = self.time_since_eat >= self.timeout
+
+        terminated = terminated or truncated
 
         # Simple reward structure: +1 for reaching target, 0 otherwise
-        reward = 1 if terminated else 0
+        reward = int(front_obj == ord('G'))
+        reward -= int(front_obj == ord('R') or terminated)
 
         observation = self._get_obs()
         info = self._get_info()
 
+
+        if terminated:
+            self.time_since_eat = 0
+            return observation, reward, terminated, truncated, info
+
+        self.snake_positions.insert(0, new_head_pos)
+        if front_obj != ord('G'):
+            self.snake_positions.pop()
+        if front_obj == ord('R'):
+            self.snake_positions.pop()
         return observation, reward, terminated, truncated, info
+
 
     def render(self):
         """Render the environment for human viewing."""
@@ -113,8 +135,18 @@ class SnakeEnv(gym.Env):
                 print(row)
             print()
 
-    def get_at_cell(cell_i: int) -> str:
-        pass
+    def get_at_cell(self, cell_i: int) -> int:
+        out = ord('0')
+
+        for pos in self.snake_positions:
+            out += (ord('S') - out) * int(cell_i == pos)
+        out += (ord('H') - out) * int(cell_i == self.snake_positions[0])
+
+        for green_pos in self.green_apple_pos:
+            out += (ord('G') - out) * int(cell_i == green_pos)
+        out +=  (ord('R') - out) * int(cell_i == self.red_apple_pos)
+
+        return out
 
 
 # Register the environment so we can create it with gym.make()
