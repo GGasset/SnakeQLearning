@@ -18,7 +18,7 @@ int main(int argc, char **argv)
 	args.deterministic_actions = false;//argc > 1;
 	args.print_run = argc > 1;
 	args.print_interval_s = .1;
-	args.nenvs = 256;
+	args.nenvs = 128;
 	args.discount_factor = .8;
 	
 	args.max_adjacent_0s = 1;

@@ -181,6 +181,8 @@ void run(VecSnakeGame &vec_env, QTable<std::string> &table, snake_args args)
 		for (size_t i = 0; i < vec_env.get_nenvs(); i++) mean_len += mean_death_len[i];
 		mean_len /= vec_env.get_nenvs();
 
+		args.learning_rate = mean_len < 7 ? .1 : mean_len < 8 ? .01 : mean_len < 10 ? .001 : .0001;
+
 		std::cout << std::setprecision(4);
 		std::cout << mean_len << " | ";
 
