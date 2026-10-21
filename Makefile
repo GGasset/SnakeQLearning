@@ -9,3 +9,8 @@ all: $(O_FILES)
 
 %.o: %.cpp
 	g++ -O3 -g -std=c++17 -o $@ -c $?
+
+clean:
+	rm -f $(O_FILES)
+
+.PHONY: all

@@ -19,6 +19,8 @@ enum action_result
 
 struct SnakeGameData
 {
+	std::vector<std::string> game;
+
 	std::vector<size_t> snake_positions;
 	size_t green_apple_pos[2];
 	size_t red_apple_pos;
@@ -35,6 +37,7 @@ class VecSnakeGame
 private:
 	size_t board_size;
 	std::vector<SnakeGameData> envs;
+	std::vector<std::string> high_score;
 
 	snake_args args;
 
@@ -50,13 +53,16 @@ private:
 public:
 	VecSnakeGame(size_t nenvs, snake_args args,  size_t board_size, size_t timeout);
 	size_t get_nenvs();
-	inline SnakeGameData get_board_data(size_t env_i) { return envs[env_i]; }
+	inline SnakeGameData &get_board_data(size_t env_i) { return envs[env_i]; }
 
 	std::string get_state(size_t env_i);
 	action_result update(size_t env_i, size_t action_i);
 
 	std::string to_string(size_t env_i);
 
+	bool is_head_at_edge(size_t env_i);
+
+	
 };
 
 std::string remove_consecutives(std::string in, char c, size_t max_consecutives);

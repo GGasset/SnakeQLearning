@@ -7,10 +7,12 @@ struct snake_args
 {
 	bool print_run = false;
 	float print_interval_s = .5;
+	bool save_training_max_score = false;
 
 	float learning_rate = .01;
 	float discount_factor = .98;
 	float temperature = 1;
+	bool deterministic_actions = false;
 
 	size_t max_adjacent_0s = 0;
 	size_t max_adjacent_body = 1;

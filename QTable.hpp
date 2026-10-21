@@ -64,11 +64,17 @@ inline void QTable<StateT>::update_Q_values(std::vector<std::tuple<StateT, size_
 
 			discounted_reward += r * discount;
 			discount *= discount_factor;
+
+			if (discount < 2e-3) break;
 		}}
 		auto [state, action_i, _] = t_values[i];
 		std::vector<float> &current_expected = table.at(state);
 
-		current_expected[action_i] = (1 - learning_rate) * current_expected[action_i] + learning_rate * discounted_reward;
+		float expected_reward = current_expected[action_i];
+
+		//if (expected_reward < 1e-5) {current_expected[action_i] = discounted_reward; continue;}
+
+		current_expected[action_i] = (1 - learning_rate) * expected_reward + learning_rate * discounted_reward;
 	}
 		
 }

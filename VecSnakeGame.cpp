@@ -285,8 +285,6 @@ std::string VecSnakeGame::to_string(size_t env_i)
 {
 	std::string out;
 	
-	// Clear screen
-	out += "\033[2J";
 
 	// Set background color to black 
 	//"\033[48;2;248;120;56m"
@@ -330,6 +328,15 @@ std::string VecSnakeGame::to_string(size_t env_i)
 	}
 	out += "\e[0m\n";
 	return out;
+}
+
+bool VecSnakeGame::is_head_at_edge(size_t env_i)
+{
+	SnakeGameData env = envs[env_i];
+	size_t head_pos = env.snake_positions[0];
+	
+	bool is_at_vertical_edges = head_pos < board_size || head_pos > board_size * board_size - board_size;
+	return is_at_vertical_edges || head_pos % board_size == 0 || head_pos % board_size == board_size - 1;
 }
 
 std::string remove_consecutives(std::string in, char c, size_t max_consecutives)
