@@ -156,6 +156,8 @@ train_value_iterations = 80
 lam = 0.97
 target_kl = 0.01
 hidden_sizes = (64, 64)
+actor_save_file = './model.keras'
+critic_save_file = './value.keras'
 
 # True if you want to render the environment
 render = True
@@ -172,9 +174,17 @@ buffer = Buffer(observation_dimensions, steps_per_epoch)
 # Initialize the actor and the critic as keras models
 observation_input = keras.Input(shape=(observation_dimensions,), dtype="float32")
 logits = mlp(observation_input, list(hidden_sizes) + [num_actions])
-actor = keras.Model(inputs=observation_input, outputs=logits)
+
+if (not os.path.exists(actor_save_file)):
+	actor = keras.Model(inputs=observation_input, outputs=logits)
+else:
+    actor = keras.saving.load_model(actor_save_file)
 value = keras.ops.squeeze(mlp(observation_input, list(hidden_sizes) + [1]), axis=1)
-critic = keras.Model(inputs=observation_input, outputs=value)
+
+if (not os.path.exists(critic_save_file)):
+	critic = keras.Model(inputs=observation_input, outputs=value)
+else:
+    critic = keras.saving.load_model(critic_save_file)
 
 # Initialize the policy and the value function optimizers
 policy_optimizer = keras.optimizers.Adam(learning_rate=policy_learning_rate)
@@ -194,7 +204,7 @@ for epoch in range(epochs):
 
     # Iterate over the steps of each epoch
     for t in range(steps_per_epoch):
-        if render and t > steps_per_epoch - 100 or False:
+        if render and t > steps_per_epoch - 100 and False:
             env.render()
         if t % 100 == 0:
             print(f'{t}/{steps_per_epoch} epoch: {epoch}')
@@ -256,4 +266,6 @@ for epoch in range(epochs):
     print(
         last_str
     )
+    actor.save(actor_save_file)
+    critic.save(critic_save_file)
 

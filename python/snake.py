@@ -129,17 +129,24 @@ class SnakeEnv(gym.Env):
 
         # Simple reward structure: +1 for reaching target, 0 otherwise
         reward = int(front_obj == ord('G'))
-        reward += .1
         reward -= int(front_obj == ord('R'))
-        reward -= int(terminated) * 5
 
         if terminated:
+            distance_to_g = []
+            for g in self.green_apple_pos.values():
+                distance_to_g.append(abs(g % self.size - new_head_pos % self.size))
+                distance_to_g[-1] += abs(g / self.size - new_head_pos / self.size)
+            distance_to_g.sort()
+            min_distance_to_g = distance_to_g[0]
+            max_possible_distance = self.size * self.size
+            reward -= int(terminated) * 5 #* min_distance_to_g / max_possible_distance
+            #reward += .1 * int(not reward)
+
             self.time_since_eat = 0
             return self._get_obs(), reward, terminated, truncated, self._get_info()
 
         self.snake_positions.insert(0, new_head_pos)
         if front_obj == ord('G'):
-            self.snake_positions.pop()
             if self.green_apple_pos[0] == new_head_pos:
                 self.green_apple_pos[0] = -1
             else:
@@ -166,9 +173,16 @@ class SnakeEnv(gym.Env):
             self.place_snake()
 
         if self.red_apple_pos == -1:
+            if self.red_apple_pos < -1 or self.red_apple_pos >= self.size * self.size:
+                 print(f'Red apple at {self.red_apple_pos}')
+                 exit(0)
             self.red_apple_pos = self.get_empty_random_pos()
 
         for key in self.green_apple_pos.keys():
+            pos = self.green_apple_pos[key]
+            if pos >= self.size * self.size or pos < -1:
+                print(f'green apple at {pos}')
+                exit(0)
             if self.green_apple_pos[key] == -1:
                 self.green_apple_pos[key] = self.get_empty_random_pos()
 
@@ -215,7 +229,7 @@ class SnakeEnv(gym.Env):
             from random import randint, seed
             from time import time_ns
             seed()
-            out = randint(0, self.size * self.size)
+            out = randint(0, self.size * self.size - 1)
             if chr(self.get_at_cell(out) == ' '):
                 return out
 
