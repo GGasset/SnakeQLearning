@@ -19,7 +19,7 @@ enum action_result
 
 struct SnakeGameData
 {
-	std::vector<std::string> game;
+	std::vector<std::tuple<std::vector<size_t>, size_t, size_t, size_t>> game;
 
 	std::vector<size_t> snake_positions;
 	size_t green_apple_pos[2];

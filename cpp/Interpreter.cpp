@@ -119,8 +119,6 @@ void run(VecSnakeGame &vec_env, QTable<std::string> &table, snake_args args)
 		{
 			size_t current_len = vec_env.get_board_data(env_i).snake_positions.size();
 
-			bool got_high_score = current_len > max_len;
-			max_len += (current_len - max_len) * (current_len > max_len);
 
 			SnakeGameData prev_board_data = vec_env.get_board_data(env_i);
 			size_t time_since_eat = prev_board_data.time_since_eat;
@@ -129,13 +127,19 @@ void run(VecSnakeGame &vec_env, QTable<std::string> &table, snake_args args)
 			size_t action_i = get_action(table.get_Q_values(state), args);
 			action_result result = vec_env.update(env_i, action_i);
 
+			SnakeGameData &bdata = vec_env.get_board_data(env_i);
+			//bdata.get_board_data(env_i).game.push_back(bdata.);
+
+			bool got_high_score = current_len > max_len;
+			max_len += (current_len - max_len) * (current_len > max_len);
+
 			float reward = 0;
 			switch (result)
 			{
 			case action_result::size_increase:
 				//reward = time_since_eat > args.timeout / 2 ? 1 : time_since_eat < args.timeout / 3? 5: 2.5;
 				reward = time_since_eat / args.timeout;
-				reward = 2; //- reward * reward;
+				reward = 5; //- reward * reward;
 				//reward *= 5;
 				//reward = (1 - time_since_eat / args.timeout);
 				break;
@@ -146,12 +150,13 @@ void run(VecSnakeGame &vec_env, QTable<std::string> &table, snake_args args)
 				mean_death_len[env_i] = current_len;
 				reward = -5;
 				//reward = -(float)time_since_eat / (args.timeout);
+				vec_env.get_board_data(env_i).game.clear();
 				break;
 			case action_result::game_won:
 				reward = 1;
 			case action_result::nothing:
 			default:
-				reward = 1 - 2 * vec_env.is_head_at_edge(env_i) * (time_since_eat > 3) - (float)time_since_eat / (args.timeout);
+				reward = -vec_env.is_head_at_edge(env_i) * (time_since_eat > 3);// - (float)time_since_eat / (args.timeout);
 				break;
 			}
 			mean_reward += reward;
