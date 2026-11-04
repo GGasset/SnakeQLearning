@@ -16,7 +16,8 @@ class SnakeEnv(gym.Env):
         }
 
 
-        self.render_mode = kwargs['render_mode']
+        if 'render_mode' in kwargs.keys():
+            self.render_mode = kwargs['render_mode']
 
         self.snake_positions: list[int] = []
         self.green_apple_pos: dict[int, int] = {0: -1, 1: -1}
@@ -77,7 +78,7 @@ class SnakeEnv(gym.Env):
             tuple: (observation, info) for the initial state
         """
         # IMPORTANT: Must call this first to seed the random number generator
-        super().reset(seed=513)
+        super().reset(seed=seed)
 
         self.green_apple_pos[0] = -1
         self.green_apple_pos[1] = -1
