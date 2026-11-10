@@ -1,20 +1,39 @@
 import gymnasium as gym
 
 from stable_baselines3 import PPO
+from stable_baselines3.common.env_util import make_vec_env
+from stable_baselines3.common.vec_env import VecFrameStack
+from os import getcwd
+from os.path import exists
+from sys import argv
 
-env = gym.make("CartPole-v1", render_mode="human")
+from .snake import *
 
-model = PPO("MlpPolicy", env, verbose=1)
-model.learn(total_timesteps=10_000)
+training = not '-v' in argv
 
-vec_env = model.get_env()
+nenvs = 32 * int(training) + int(not training)
+print(f'number of parallel environments: {nenvs}')
+
+# Parallel environments
+vec_env = make_vec_env("SnakeEnv", n_envs=nenvs, env_kwargs={'render_mode': 'ansi'})
+
+policy_kwargs={'net_args': [128, 128, 128, 128]}
+model = PPO("MlpPolicy", vec_env, verbose=1, device='cpu')
+
+if exists("ppo_snake.zip") and not '-nl' in argv:
+    model = PPO.load("ppo_snake", vec_env, device='cpu')
+    print('Loaded')
+if training:
+    while True:
+        model.learn(total_timesteps=100000, progress_bar=True)
+        model.save("ppo_snake")
+
+
+from time import sleep
 obs = vec_env.reset()
-for i in range(1000):
-    actions, _states = model.predict(obs, deterministic=True)
-    obs, rewards, dones, info = vec_env.step(actions)
-    vec_env.render()
-    # VecEnv resets automatically
-    # if done:
-    #   obs = env.reset()
-
-env.close()
+print('Finished training')
+while True:
+    action, _states = model.predict(obs)
+    obs, rewards, dones, info = vec_env.step(action)
+    vec_env.render("ansi")
+    sleep(1 / 10)
