@@ -133,9 +133,11 @@ class SnakeEnv(gym.Env):
         if len(self.snake_positions) > 1 and self.snake_positions[1] == new_head_pos:
             new_head_pos = self.snake_positions[0] - direction
 
-        scaped_hor = new_head_pos < 0 or new_head_pos > self.size * self.size
-        scaped_ver = direction == -1 and old_head_pos % self.size == 0
-        scaped_ver = scaped_ver or direction == 1 and old_head_pos % self.size == self.size - 1
+        scaped_ver = new_head_pos < 0 or new_head_pos > self.size * self.size
+        scaped_hor = False
+        if action in [0, 2]: # moving horizontally
+            scaped_hor = old_head_pos // self.size
+            scaped_hor = scaped_hor != new_head_pos // self.size
 
         front_obj = self.get_at_cell(new_head_pos)
         terminated = scaped_hor or scaped_ver or front_obj == 'S'
