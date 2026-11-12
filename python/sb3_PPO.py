@@ -7,7 +7,7 @@ from os import getcwd
 from os.path import exists
 from sys import argv
 
-from .snake import *
+import snake_env
 
 training = not '-v' in argv
 
