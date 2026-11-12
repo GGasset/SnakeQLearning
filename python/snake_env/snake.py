@@ -28,9 +28,9 @@ class SnakeEnv(gym.Env):
         self.time_since_eat: int = 0
 
         self.observation_space = gym.spaces.Box(
-            low=-1,
+            low=0,
             high=1,
-            shape=(size * size * 3,),
+            shape=(size * 2 * 4,),
             dtype=np.int32,
         )
         # Define what actions are available (4 directions)
@@ -59,15 +59,21 @@ class SnakeEnv(gym.Env):
         out = []
         area = self.size * self.size
 
-        '''
         horizontal_indices: list[int] = [int(self.size * (self.snake_positions[0] / self.size) + i) for i in range(self.size)]
         vertical_indices: list[int] = [int(self.size * i + self.snake_positions[0] % self.size) for i in range(self.size)]
 
         obs_indices = horizontal_indices + vertical_indices
 
-        for indice in obs_indices:
-            out.append(self.ascii_to_obs[self.get_at_cell(indice)])
-        '''
+        obs_board = [self.get_at_cell(i) for i in obs_indices]
+        S = [int(c == 'S') for c in obs_board]
+        H = [int(c == 'H') for c in obs_board]
+        G = [int(c == 'G') for c in obs_board]
+        R = [int(c == 'R') for c in obs_board]
+
+        out = S + H + G + R
+
+        return np.array(out, dtype=np.int32)
+
 
         board = [self.get_at_cell(i) for i in range(self.size * self.size)]
         green_apple_bool_board = [int(c == 'G') for c in board]
@@ -231,22 +237,6 @@ class SnakeEnv(gym.Env):
         if outside_of_board:
             self.place_snake()
         return
-
-        vertical_shift: int = 0
-        if lowest_position < 0:
-            vertical_shift = int(abs(lowest_position) / self.size)
-        if highest_position >= self.size * self.size:
-            vertical_shift = int(-(highest_position - self.size) / self.size)
-        
-        horizontal_shift: int = 0
-        different_row = lowest_position / self.size != highest_position / self.size
-        if direction == 0 or direction == 2 and different_row:
-            horizontal_shift = -self._action_to_direction[direction]
-            horizontal_shift *= self.size - abs(lowest_position % self.size - highest_position % self.size)
-
-        snake_shift: int = vertical_shift * self.size + horizontal_shift
-        self.snake_positions = [pos + snake_shift for pos in new_snake_positions]
-
 
     def get_empty_random_pos(self):
         while True:
