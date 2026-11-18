@@ -11,7 +11,7 @@ import gymnasium as gym
 
 class SnakeEnv(gym.Env):
     metadata = {"render_modes": ["ansi", 'human'], "render_fps": 4}
-    def __init__(self, size=10, render_mode=None):
+    def __init__(self, size=10, stack_size=10, render_mode=None):
         if not (render_mode is None or render_mode in self.metadata["render_modes"]):
             print('a')
             raise TypeError()
@@ -27,10 +27,13 @@ class SnakeEnv(gym.Env):
         self.timeout: int = 50
         self.time_since_eat: int = 0
 
+        self.n_observations = size * 2 * 4 * stack_size
+        self.observation_out = [0 for _ in range(self.n_observations)]
+
         self.observation_space = gym.spaces.Box(
             low=0,
             high=1,
-            shape=(size * 2 * 4,),
+            shape=(self.n_observations,),
             dtype=np.int32,
         )
         # Define what actions are available (4 directions)
@@ -72,16 +75,10 @@ class SnakeEnv(gym.Env):
 
         out = S + H + G + R
 
-        return np.array(out, dtype=np.int32)
+        #apply stacking
+        self.observation_out = self.observation_out[len(out):].extend(out)
 
-
-        board = [self.get_at_cell(i) for i in range(self.size * self.size)]
-        green_apple_bool_board = [int(c == 'G') for c in board]
-        body_pos_board = [int(c == 'S') - int(c == 'H') for c in board]
-        red_apple_board = [int(c == 'R') for c in board]
-        out = green_apple_bool_board + body_pos_board + red_apple_board
-
-        return np.array(out, dtype=np.int32)
+        return np.array(self.observation_out, dtype=np.int32)
 
     def _get_info(self):
         """Compute auxiliary information for debugging.
@@ -114,6 +111,7 @@ class SnakeEnv(gym.Env):
         self.alive_t = 0
 
 
+        self.observation_out = [0 for _ in range(self.n_observations)]
         observation = self._get_obs()
         info = self._get_info()
 
