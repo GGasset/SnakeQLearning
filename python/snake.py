@@ -128,19 +128,23 @@ class SnakeEnv(gym.Env):
 
         terminated = terminated or truncated
 
+        prev_distance = self.min_distance_to_g
+        distance_to_g = []
+        for g in self.green_apple_pos.values():
+            distance_to_g.append(abs(g % self.size - new_head_pos % self.size))
+            distance_to_g[-1] += abs(g / self.size - new_head_pos / self.size)
+        distance_to_g.sort()
+        self.min_distance_to_g = distance_to_g[0]
+
         # Simple reward structure: +1 for reaching target, 0 otherwise
         reward = int(front_obj == ord('G'))
+        reward += prev_distance - self.min_distance_to_g
         reward -= int(front_obj == ord('R'))
+        reward -= int(terminated) * 5
 
         if terminated:
-            distance_to_g = []
-            for g in self.green_apple_pos.values():
-                distance_to_g.append(abs(g % self.size - new_head_pos % self.size))
-                distance_to_g[-1] += abs(g / self.size - new_head_pos / self.size)
-            distance_to_g.sort()
-            min_distance_to_g = distance_to_g[0]
             max_possible_distance = self.size * self.size
-            reward -= int(terminated) * 5 #* min_distance_to_g / max_possible_distance
+             #* min_distance_to_g / max_possible_distance
             #reward += .1 * int(not reward)
 
             self.time_since_eat = 0
