@@ -1,4 +1,6 @@
 
+from time import sleep
+
 from typing import Optional
 import numpy as np
 import numpy.random as rand
@@ -8,16 +10,15 @@ import gymnasium as gym
 
 
 class SnakeEnv(gym.Env):
-    def __init__(self, size=10, **kwargs: dict):
+    metadata = {"render_modes": ["ansi", 'human'], "render_fps": 4}
+    def __init__(self, size=10, render_mode=None):
+        if not (render_mode is None or render_mode in self.metadata["render_modes"]):
+            print('a')
+            raise TypeError()
+        self.render_mode = render_mode
+
+
         self.size: int = size
-        super().__init__()
-        self.metadata = {
-            "render_modes": ["human", "rgb_array"]
-        }
-
-
-        if 'render_mode' in kwargs.keys():
-            self.render_mode = kwargs['render_mode']
 
         self.snake_positions: list[int] = []
         self.green_apple_pos: dict[int, int] = {0: -1, 1: -1}
@@ -28,8 +29,8 @@ class SnakeEnv(gym.Env):
 
         self.observation_space = gym.spaces.Box(
             low=0,
-            high=255,
-            shape=(2 * self.size,),
+            high=1,
+            shape=(size * 2 * 4,),
             dtype=np.int32,
         )
         # Define what actions are available (4 directions)
@@ -44,18 +45,41 @@ class SnakeEnv(gym.Env):
             3: self.size,   # Move down (row + 1)
         }
 
+        self.ascii_to_obs = {
+            '0': 0,
+            'G': 1,
+            'R': 2,
+            'S': 3,
+            'H': 4
+        }
+
         self.prev_action = -1
 
     def _get_obs(self):
         out = []
+        area = self.size * self.size
 
         horizontal_indices: list[int] = [int(self.size * (self.snake_positions[0] / self.size) + i) for i in range(self.size)]
         vertical_indices: list[int] = [int(self.size * i + self.snake_positions[0] % self.size) for i in range(self.size)]
 
         obs_indices = horizontal_indices + vertical_indices
 
-        for indice in obs_indices:
-            out.append(self.get_at_cell(indice))
+        obs_board = [self.get_at_cell(i) for i in obs_indices]
+        S = [int(c == 'S') for c in obs_board]
+        H = [int(c == 'H') for c in obs_board]
+        G = [int(c == 'G') for c in obs_board]
+        R = [int(c == 'R') for c in obs_board]
+
+        out = S + H + G + R
+
+        return np.array(out, dtype=np.int32)
+
+
+        board = [self.get_at_cell(i) for i in range(self.size * self.size)]
+        green_apple_bool_board = [int(c == 'G') for c in board]
+        body_pos_board = [int(c == 'S') - int(c == 'H') for c in board]
+        red_apple_board = [int(c == 'R') for c in board]
+        out = green_apple_bool_board + body_pos_board + red_apple_board
 
         return np.array(out, dtype=np.int32)
 
@@ -112,16 +136,18 @@ class SnakeEnv(gym.Env):
 
         old_head_pos = self.snake_positions[0]
         new_head_pos = self.snake_positions[0] + direction
-        if self.last_position == new_head_pos:
+        if len(self.snake_positions) > 1 and self.snake_positions[1] == new_head_pos:
             new_head_pos = self.snake_positions[0] - direction
 
-        scaped_hor = new_head_pos < 0 or new_head_pos > self.size * self.size
-        scaped_ver = direction == -1 and old_head_pos % self.size == 0
-        scaped_ver = scaped_ver or direction == 1 and old_head_pos % self.size == self.size - 1
+        scaped_ver = new_head_pos < 0 or new_head_pos > self.size * self.size
+        scaped_hor = False
+        if action in [0, 2]: # moving horizontally
+            scaped_hor = old_head_pos // self.size
+            scaped_hor = scaped_hor != new_head_pos // self.size
 
         front_obj = self.get_at_cell(new_head_pos)
-        terminated = scaped_hor or scaped_ver or front_obj == ord('S')
-        terminated = terminated or (front_obj == ord('R') and
+        terminated = scaped_hor or scaped_ver or front_obj == 'S'
+        terminated = terminated or (front_obj == 'R' and
                                     len(self.snake_positions) == 1)
 
         truncated = self.time_since_eat >= self.timeout
@@ -137,9 +163,10 @@ class SnakeEnv(gym.Env):
         self.min_distance_to_g = distance_to_g[0]
 
         # Simple reward structure: +1 for reaching target, 0 otherwise
-        reward = int(front_obj == ord('G'))
+        reward = int(front_obj == 'G')
         reward += prev_distance - self.min_distance_to_g
-        reward -= int(front_obj == ord('R'))
+        reward -= int(front_obj == 'R')
+        reward += .1 * (self.time_since_eat / self.timeout)
         reward -= int(terminated) * 5
 
         if terminated:
@@ -151,14 +178,15 @@ class SnakeEnv(gym.Env):
             return self._get_obs(), reward, terminated, truncated, self._get_info()
 
         self.snake_positions.insert(0, new_head_pos)
-        if front_obj == ord('G'):
+        if front_obj == 'G':
+            self.time_since_eat = 0
             if self.green_apple_pos[0] == new_head_pos:
                 self.green_apple_pos[0] = -1
             else:
                 self.green_apple_pos[1] = -1
         else:
             self.snake_positions.pop()
-        if front_obj == ord('R'):
+        if front_obj == 'R':
             self.snake_positions.pop()
             self.red_apple_pos = -1
         
@@ -213,39 +241,23 @@ class SnakeEnv(gym.Env):
             self.place_snake()
         return
 
-        vertical_shift: int = 0
-        if lowest_position < 0:
-            vertical_shift = int(abs(lowest_position) / self.size)
-        if highest_position >= self.size * self.size:
-            vertical_shift = int(-(highest_position - self.size) / self.size)
-        
-        horizontal_shift: int = 0
-        different_row = lowest_position / self.size != highest_position / self.size
-        if direction == 0 or direction == 2 and different_row:
-            horizontal_shift = -self._action_to_direction[direction]
-            horizontal_shift *= self.size - abs(lowest_position % self.size - highest_position % self.size)
-
-        snake_shift: int = vertical_shift * self.size + horizontal_shift
-        self.snake_positions = [pos + snake_shift for pos in new_snake_positions]
-
-
     def get_empty_random_pos(self):
         while True:
             from random import randint, seed
             from time import time_ns
             seed()
             out = randint(0, self.size * self.size - 1)
-            if chr(self.get_at_cell(out) == ' '):
+            if self.get_at_cell(out) == '0':
                 return out
 
     def render(self):
         """Render the environment for human viewing."""
-        if self.render_mode == "human":
+        if self.render_mode in ["ansi", 'human', None]:
             out = ''
             for i in range(self.size * self.size):
                 if i % self.size == 0:
                     out += "\033[0m\n"
-                cell = chr(self.get_at_cell(i))
+                cell = self.get_at_cell(i)
                 to_add = ''
                 if cell == 'H':
                     to_add += "\033[38;2;114;132;208m"
@@ -263,11 +275,11 @@ class SnakeEnv(gym.Env):
                 out += to_add
             out += "\033[0m\n"
             print(out, end='')
-            from time import sleep
-            sleep(.03)
+            if (self.render_mode in ['human', None]):
+                sleep(1 / 30)
             return out
 
-    def get_at_cell(self, cell_i: int) -> int:
+    def get_at_cell(self, cell_i: int) -> str:
         out = ord('0')
 
         for pos in self.snake_positions:
@@ -279,7 +291,7 @@ class SnakeEnv(gym.Env):
             out += (ord('G') - out) * int(cell_i == green_pos)
         out += (ord('R') - out) * int(cell_i == self.red_apple_pos)
 
-        return out
+        return chr(out)
 
 
 # Register the environment so we can create it with gym.make()
